@@ -254,13 +254,13 @@ Returns: List[Dict[str, Any]]
 ## Future Improvements
 
 1. **Features**
-   - More framework support
+   - More framework support (Currently supports only gradio and python scripts)
    - Git integration
    - Collaborative editing
    - Project templates
-
+   - User authentication and logging
+     
 2. **Technical**
-   - WebAssembly integration
-   - Service workers
    - Docker support
    - CI/CD pipeline
+   - Multiple LLM models for different tasks
