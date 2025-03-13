@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Code Assist</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div id="loading-message" class="loading-message">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <button id="new-project-btn" class="nav-btn">
+                <i class="fas fa-plus"></i> New Project
+            </button>
+            <button id="projects-btn" class="nav-btn">
+                <i class="fas fa-folder"></i> Projects
+            </button>
+        </div>
+        <div class="nav-right">
+            <button id="settings-btn" class="nav-btn">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </div>
+    </nav>
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="screen">
+        <div class="welcome-content">
+            <h1>Welcome to LLM Code Assist</h1>
+            <p>Create and manage your Python projects with AI assistance</p>
+            <div class="welcome-buttons">
+                <button id="create-project-btn" class="btn primary">
+                    <i class="fas fa-plus"></i> Create New Project
+                </button>
+                <button id="browse-projects-btn" class="btn secondary">
+                    <i class="fas fa-folder-open"></i> Browse Projects
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Creation Screen -->
+    <div id="project-creation-screen" class="screen" style="display: none;">
+        <div class="screen-content">
+            <h2>Create New Project</h2>
+            <div class="project-form">
+                <div class="form-group">
+                    <label for="project-name">Project Name</label>
+                    <input type="text" id="project-name" placeholder="Enter project name">
+                </div>
+                <div class="form-group">
+                    <label for="project-framework">Framework</label>
+                    <div class="framework-options">
+                        <div class="framework-option">
+                            <input type="radio" id="framework-django" name="framework" value="django">
+                            <label for="framework-django">
+                                <i class="fas fa-cubes framework-icon django"></i>
+                                <span>Django</span>
+                                <small>Full-featured web framework</small>
+                            </label>
+                        </div>
+                        <div class="framework-option">
+                            <input type="radio" id="framework-flask" name="framework" value="flask">
+                            <label for="framework-flask">
+                                <i class="fas fa-flask framework-icon flask"></i>
+                                <span>Flask</span>
+                                <small>Lightweight web framework</small>
+                            </label>
+                        </div>
+                        <div class="framework-option">
+                            <input type="radio" id="framework-streamlit" name="framework" value="streamlit">
+                            <label for="framework-streamlit">
+                                <i class="fas fa-stream framework-icon streamlit"></i>
+                                <span>Streamlit</span>
+                                <small>Data apps made easy</small>
+                            </label>
+                        </div>
+                        <div class="framework-option">
+                            <input type="radio" id="framework-gradio" name="framework" value="gradio">
+                            <label for="framework-gradio">
+                                <i class="fas fa-code framework-icon gradio"></i>
+                                <span>Gradio</span>
+                                <small>ML interfaces in minutes</small>
+                            </label>
+                        </div>
+                        <div class="framework-option">
+                            <input type="radio" id="framework-python" name="framework" value="python">
+                            <label for="framework-python">
+                                <i class="fab fa-python framework-icon python"></i>
+                                <span>Python</span>
+                                <small>Standard Python project</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="project-requirements">Project Requirements</label>
+                    <textarea id="project-requirements" placeholder="Describe your project requirements..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="analyze-btn" class="btn primary">
+                        <i class="fas fa-search"></i> Analyze Requirements
+                    </button>
+                </div>
+            </div>
+            <div id="analysis-result" class="analysis-result" style="display: none;">
+                <div id="analysis-content" class="analysis-content">
+                    <!-- Analysis results will be displayed here -->
+                </div>
+            </div>
+            <div class="form-actions">
+                <button id="create-project-confirm-btn" class="btn primary" style="display: none;">
+                    <i class="fas fa-check"></i> Create Project
+                </button>
+                <button id="modify-analysis-btn" class="btn secondary" style="display: none;">
+                    <i class="fas fa-edit"></i> Modify Requirements
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project List Screen -->
+    <div id="project-list-screen" class="screen" style="display: none;">
+        <div class="screen-content">
+            <div class="screen-header">
+                <h2>Your Projects</h2>
+                <div class="screen-actions">
+                    <input type="text" id="project-search" placeholder="Search projects...">
+                    <button id="refresh-projects-btn" class="btn secondary">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="projects-list" class="projects-list">
+                <!-- Projects will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Editor Screen -->
+    <div id="project-editor-screen" class="screen" style="display: none;">
+        <div class="screen-content">
+            <div class="editor-header">
+                <button id="editor-back-btn" class="btn secondary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <div class="project-title">
+                    <h3>Project: <span id="editor-project-name"></span></h3>
+                </div>
+                <div class="editor-actions">
+                    <button id="run-project-btn" class="btn primary">
+                        <i class="fas fa-play"></i> Run
+                    </button>
+                    <button id="install-deps-btn" class="btn secondary">
+                        <i class="fas fa-download"></i> Install Dependencies
+                    </button>
+                    <button id="save-file-btn" class="btn secondary">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button id="customize-code-btn" class="btn secondary">
+                        <i class="fas fa-magic"></i> Customize
+                    </button>
+                    <button id="new-file-btn" class="btn secondary">
+                        <i class="fas fa-file"></i> New File
+                    </button>
+                </div>
+            </div>
+            <div class="editor-container">
+                <div class="file-explorer">
+                    <div id="file-tree"></div>
+                </div>
+                <div class="editor-main">
+                    <div id="editor-tabs" class="editor-tabs"></div>
+                    <div id="code-editor"></div>
+                </div>
+            </div>
+            <div id="terminal" class="terminal">
+                <div class="terminal-header">
+                    <span>Terminal</span>
+                    <div class="terminal-controls">
+                        <button id="clear-terminal-btn" class="btn-icon">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button id="toggle-terminal-btn" class="btn-icon">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="terminal-content" class="terminal-content">
+                    <div id="terminal-output"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Dialog -->
+    <div id="settings-dialog" class="dialog">
+        <div class="dialog-content">
+            <h2>Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Editor Settings</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="line-numbers-toggle" checked>
+                            Show Line Numbers
+                        </label>
+                        <label>
+                            <input type="checkbox" id="word-wrap-toggle" checked>
+                            Word Wrap
+                        </label>
+                        <label>
+                            <input type="checkbox" id="auto-indent-toggle" checked>
+                            Auto Indent
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button id="save-settings-btn" class="btn primary">Save</button>
+                <button id="cancel-settings-btn" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customization Dialog -->
+    <div id="customization-dialog" class="dialog">
+        <div class="dialog-content">
+            <h2>Customize Code</h2>
+            <div class="form-group">
+                <label for="customization-request">What would you like to change?</label>
+                <textarea id="customization-request" placeholder="Describe the changes you want to make..."></textarea>
+            </div>
+            <div class="dialog-actions">
+                <button id="apply-customization-btn" class="btn primary">Apply</button>
+                <button id="cancel-customization-btn" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New File Dialog -->
+    <div id="new-file-dialog" class="dialog">
+        <div class="dialog-content">
+            <h2>Create New File</h2>
+            <div class="form-group">
+                <label for="new-file-name">File Name</label>
+                <input type="text" id="new-file-name" placeholder="Enter file name">
+            </div>
+            <div class="dialog-actions">
+                <button id="create-file-btn" class="btn primary">Create</button>
+                <button id="cancel-new-file-btn" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <i class="fas fa-info-circle"></i>
+        <span></span>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
