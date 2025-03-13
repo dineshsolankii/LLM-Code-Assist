@@ -41,6 +41,7 @@ LLM-Code-Assist is a web-based IDE that helps developers create and manage Pytho
    ```bash
    # Follow Ollama installation instructions for your OS
    # https://github.com/ollama/ollama
+   # The ModelManager class in your application uses an environment variable to determine the base URL for connecting to the service. By default, it connects to http://localhost:11434. If you need to change the port, you can do so by setting the OLLAMA_BASE_URL environment variable.
    ```
 
 4. **Download Required Model**
@@ -211,4 +212,3 @@ For issues and support:
 1. Check troubleshooting guide
 2. Review existing GitHub issues
 3. Create new issue with details
-4. Join community discussions
