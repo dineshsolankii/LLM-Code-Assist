@@ -15,22 +15,50 @@ class ProjectCreator:
 
     def create_project(self, requirements: Dict[str, Any], framework: str, project_name: str) -> str:
         """Create the project structure based on requirements and framework."""
-        logger.info(f"Creating project structure for {project_name} using {framework}")
-        
-        # If requirements doesn't have file_structure, generate it
-        if "file_structure" not in requirements or not requirements["file_structure"]:
-            requirements["file_structure"] = self._generate_file_structure(requirements, framework)
-        
-        # Create the file structure
-        self.file_manager.create_project_structure(project_name, requirements["file_structure"])
-        
-        # Create requirements.txt
-        self._create_requirements_file(project_name, requirements, framework)
-        
-        # Create README.md
-        self._create_readme_file(project_name, requirements, framework)
-        
-        return self.file_manager.get_project_path(project_name)
+        try:
+            logger.info(f"Creating project structure for {project_name} using {framework}")
+            
+            # Validate inputs
+            if not project_name or not isinstance(project_name, str):
+                raise ValueError(f"Invalid project name: {project_name}")
+                
+            if not framework or not isinstance(framework, str):
+                raise ValueError(f"Invalid framework: {framework}")
+                
+            if not requirements or not isinstance(requirements, dict):
+                raise ValueError(f"Invalid requirements: {requirements}")
+            
+            # If requirements doesn't have file_structure, generate it
+            if "file_structure" not in requirements or not requirements["file_structure"]:
+                logger.info(f"Generating file structure for {project_name}")
+                requirements["file_structure"] = self._generate_file_structure(requirements, framework)
+            
+            # Ensure file_structure is a list
+            if not isinstance(requirements["file_structure"], list):
+                logger.warning(f"file_structure is not a list, converting: {requirements['file_structure']}")
+                requirements["file_structure"] = []
+            
+            # Create the file structure
+            logger.info(f"Creating file structure with {len(requirements['file_structure'])} items")
+            self.file_manager.create_project_structure(project_name, requirements["file_structure"])
+            
+            # Create requirements.txt
+            logger.info(f"Creating requirements.txt for {project_name}")
+            self._create_requirements_file(project_name, requirements, framework)
+            
+            # Create README.md
+            logger.info(f"Creating README.md for {project_name}")
+            self._create_readme_file(project_name, requirements, framework)
+            
+            project_path = self.file_manager.get_project_path(project_name)
+            logger.info(f"Project {project_name} created successfully at {project_path}")
+            return project_path
+            
+        except Exception as e:
+            logger.error(f"Error creating project {project_name}: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
 
     def _generate_file_structure(self, requirements: Dict[str, Any], framework: str) -> List[Dict[str, str]]:
         """Generate the file structure based on requirements and framework."""

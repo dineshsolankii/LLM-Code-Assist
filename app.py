@@ -125,27 +125,49 @@ def create_project():
     """Create a new project."""
     try:
         data = request.get_json()
+        if not data:
+            logger.error("No JSON data received in project creation request")
+            return jsonify({'success': False, 'error': 'No data provided'})
+            
         project_name = data.get('projectName')
         framework = data.get('framework')
         analysis = data.get('analysis')
+        requirements = data.get('requirements')
+        
+        logger.info(f"Creating project: {project_name} with framework: {framework}")
         
         if not all([project_name, framework, analysis]):
-            return jsonify({'success': False, 'error': 'Missing required fields'})
+            missing = []
+            if not project_name: missing.append('projectName')
+            if not framework: missing.append('framework')
+            if not analysis: missing.append('analysis')
+            error_msg = f"Missing required fields: {', '.join(missing)}"
+            logger.error(error_msg)
+            return jsonify({'success': False, 'error': error_msg})
+        
+        # Ensure file_structure exists in analysis
+        if 'file_structure' not in analysis or not analysis['file_structure']:
+            logger.info(f"No file structure found in analysis, generating one")
         
         # Create the project
+        logger.info(f"Creating project structure for {project_name}")
         project_path = project_creator.create_project(analysis, framework, project_name)
         
         # Generate code for main.py or app.py
         main_file = "app.py" if framework in ["flask", "gradio", "streamlit"] else "main.py"
+        logger.info(f"Generating code for {main_file}")
         code_generator.generate(project_name, main_file, analysis)
         
+        logger.info(f"Project {project_name} created successfully at {project_path}")
         return jsonify({
             'success': True,
             'projectName': project_name,
             'path': project_path
         })
     except Exception as e:
+        import traceback
         logger.error(f"Error creating project: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/project', methods=['GET'])
@@ -389,6 +411,24 @@ def handle_stop_execution():
         active_sessions[session_id]['stop_event'].set()
         socketio.emit('execution_stopped', room=session_id)
         logger.info(f"Execution stopped for session: {session_id}")
+
+@app.route('/api/project/<project_name>', methods=['DELETE'])
+def delete_project(project_name):
+    """Delete a project."""
+    try:
+        if not project_name:
+            return jsonify({'success': False, 'error': 'No project name provided'})
+        
+        # Delete the project using file manager
+        success = file_manager.delete_project(project_name)
+        
+        if not success:
+            return jsonify({'success': False, 'error': 'Project not found or could not be deleted'})
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting project: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8001, debug=True)

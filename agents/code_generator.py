@@ -11,7 +11,7 @@ class CodeGenerator:
         self.model_manager = model_manager
         self.rag_system = rag_system
         self.file_manager = file_manager
-        self.model = "deepseek-coder-v2:latest"
+        self.model = "deepseek-coder-v2:16b"  # Using the 16B model for code generation
 
     def generate(self, project_name: str, file_path: str, requirements: Dict[str, Any]) -> str:
         """Generate code for a specific file in the project."""

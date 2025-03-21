@@ -241,10 +241,12 @@ main {
 
 .dialog-footer {
     display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    padding-top: 1rem;
+    justify-content: center;
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+    margin-top: 1rem;
     border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
 }
 
 .form-group label {
@@ -295,9 +297,11 @@ main {
 
 .form-actions {
     display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1rem;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0;
 }
 
 .project-creation-result {

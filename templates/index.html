@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -108,7 +109,12 @@
                 </div>
                 <div class="form-group">
                     <label for="project-requirements">Project Requirements</label>
-                    <textarea id="project-requirements" placeholder="Describe your project requirements..."></textarea>
+                    <textarea
+                        id="user-prompt"
+                        class="prompt-input"
+                        placeholder="Describe your project requirements here..."
+                        rows="5"
+                    ></textarea>
                 </div>
                 <div class="form-actions">
                     <button id="analyze-btn" class="btn primary">

@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 class CodeAssistApp {
+    validateJSON(text) {
+        try {
+            JSON.parse(text);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
     constructor() {
         // Initialize settings
         this.settings = {
@@ -20,6 +28,9 @@ class CodeAssistApp {
             autoIndent: localStorage.getItem('autoIndent') !== 'false'
         };
 
+        // Bind methods
+        this.analyzeRequirements = this.analyzeRequirements.bind(this);
+        this.getUserPrompt = this.getUserPrompt.bind(this);
         // State
         this.currentScreen = 'welcome-screen';
         this.currentProject = null;
@@ -37,6 +48,12 @@ class CodeAssistApp {
             projectList: document.querySelector('#project-list-screen'),
             projectEditor: document.querySelector('#project-editor-screen')
         };
+        
+        // Store user prompt element reference
+        this.userPromptElement = document.querySelector('#user-prompt');
+        if (!this.userPromptElement) {
+            console.error('User prompt element not found');
+        }
         
         // Buttons - Using querySelector for more reliable selection
         this.buttons = {
@@ -80,6 +97,11 @@ class CodeAssistApp {
         // Notification element
         this.notification = document.querySelector('#notification');
 
+        // Add null checks for DOM elements
+        if (!document.querySelector('#user-prompt')) {
+            console.error('User prompt element not found');
+        }
+
         // Bind methods to preserve 'this' context
         this.showScreen = this.showScreen.bind(this);
         this.showNotification = this.showNotification.bind(this);
@@ -101,6 +123,10 @@ class CodeAssistApp {
         this.createNewFile = this.createNewFile.bind(this);
         this.toggleTerminal = this.toggleTerminal.bind(this);
         this.clearTerminal = this.clearTerminal.bind(this);
+    }
+
+    getUserPrompt() {
+        return this.userPromptElement ? this.userPromptElement.value : '';
     }
 
     showNotification(message, type = 'info') {
@@ -500,13 +526,22 @@ class CodeAssistApp {
             console.log('Initializing Socket.IO connection...');
             
             // Initialize Socket.IO with reconnection options
-            this.socket = io({
+            this.socket = io.connect('/', {
                 reconnection: true,
                 reconnectionAttempts: 5,
                 reconnectionDelay: 1000,
                 reconnectionDelayMax: 5000,
                 timeout: 20000,
                 transports: ['websocket', 'polling']
+            });
+            
+            this.socket.on('connect', () => {
+                console.log('WebSocket connected');
+            });
+            
+            this.socket.on('connect_error', (error) => {
+                console.error('WebSocket connection error:', error);
+                this.showNotification('Connection to server failed', 'error');
             });
             
             this.socket.on('connect', () => {
@@ -545,7 +580,8 @@ class CodeAssistApp {
             // Listen for analysis results
             this.socket.on('analysis_result', (data) => {
                 console.log('Received analysis result:', data);
-                if (data.success) {
+                // Check if data contains analysis property directly
+                if (data && data.analysis) {
                     this.analysisResult = data.analysis;
                     this.renderAnalysisResult(data.analysis);
                     this.showNotification('Analysis complete', 'success');
@@ -761,54 +797,64 @@ class CodeAssistApp {
     
     // Project Analysis and Creation
     analyzeRequirements() {
-        console.log('Analyzing requirements...');
-        
-        const projectName = document.getElementById('project-name').value.trim();
-        const projectRequirements = document.getElementById('project-requirements').value.trim();
-        const selectedFramework = document.querySelector('input[name="framework"]:checked');
-        
-        // Validate inputs
-        if (!projectName) {
-            this.showNotification('Please enter a project name', 'error');
-            return;
-        }
-        
-        if (!projectRequirements) {
-            this.showNotification('Please describe your project requirements', 'error');
-            return;
-        }
+        try {
+            // Validate user input first
+            const userPrompt = this.getUserPrompt();
+            if (!userPrompt || userPrompt.trim().length < 5) {
+                this.showNotification('Please enter a more detailed project description', 'warning');
+                return;
+            }
+            
+            // Remove any previous event listeners to prevent duplicates
+            this.socket.off('analysis_result');
+            this.socket.off('analysis_error');
+            
+            // Show loading state immediately
+            this.showLoading('Analyzing requirements...');
+            
+            // Send the request
+            this.socket.emit('analyze_requirements', {
+                name: this.currentProject || 'new_project',
+                requirements: userPrompt,
+                framework: 'default'
+            });
 
-        if (!selectedFramework) {
-            this.showNotification('Please select a framework', 'error');
-            return;
-        }
-        
-        // Reset previous analysis results
-        const analysisResult = document.querySelector('#analysis-result');
-        const createBtn = document.querySelector('#create-project-confirm-btn');
-        const modifyBtn = document.querySelector('#modify-analysis-btn');
-        
-        if (analysisResult) analysisResult.style.display = 'none';
-        if (createBtn) createBtn.style.display = 'none';
-        if (modifyBtn) modifyBtn.style.display = 'none';
-        
-        // Show loading state
-        this.showLoading('Analyzing requirements...');
-        
-        // Check Socket.IO connection
-        if (!this.socket || !this.socket.connected) {
-            console.error('Socket.IO not connected');
-            this.showNotification('Connection error. Please refresh the page.', 'error');
+            // Handle successful analysis
+            this.socket.on('analysis_result', (data) => {
+                this.hideLoading();
+                if (data?.analysis) {
+                    this.analysisResult = data.analysis;
+                    this.renderAnalysisResult(data.analysis);
+                    this.buttons.createProjectConfirmBtn.style.display = 'block';
+                    this.buttons.modifyAnalysisBtn.style.display = 'block';
+                    this.showNotification('Analysis complete!', 'success');
+                } else {
+                    this.showNotification('Received empty analysis result', 'error');
+                }
+            });
+
+            // Handle analysis errors
+            this.socket.once('analysis_error', (error) => {
+                this.hideLoading();
+                console.error('Analysis failed:', error);
+                this.showNotification(error?.message || 'Analysis failed. Please try again with a more detailed description.', 'error');
+                this.buttons.createProjectConfirmBtn.style.display = 'none';
+            });
+            
+            // Set a timeout in case the server doesn't respond
+            setTimeout(() => {
+                if (document.querySelector('#loading-overlay').style.display !== 'none') {
+                    this.hideLoading();
+                    this.showNotification('Analysis is taking longer than expected. Please try again.', 'warning');
+                }
+            }, 30000); // 30 seconds timeout
+            
+        } catch (error) {
+            console.error('Analysis failed:', error);
+            this.showNotification(`Analysis error: ${error.message}`, 'error');
+            this.buttons.createProjectConfirmBtn.style.display = 'none';
             this.hideLoading();
-            return;
         }
-        
-        // Emit analysis request via Socket.IO
-        this.socket.emit('analyze_requirements', {
-            name: projectName,
-            requirements: projectRequirements,
-            framework: selectedFramework.value
-        });
     }
     
     renderAnalysisResult(analysis) {
@@ -891,6 +937,11 @@ class CodeAssistApp {
             if (createBtn) createBtn.style.display = 'block';
             if (modifyBtn) modifyBtn.style.display = 'block';
             
+            // Ensure the buttons are visible by logging their state
+            console.log('Analysis result display:', analysisResult ? analysisResult.style.display : 'element not found');
+            console.log('Create button display:', createBtn ? createBtn.style.display : 'element not found');
+            console.log('Modify button display:', modifyBtn ? modifyBtn.style.display : 'element not found');
+            
         } catch (error) {
             console.error('Error rendering analysis result:', error);
             this.showNotification('Error displaying analysis result', 'error');
@@ -913,6 +964,7 @@ class CodeAssistApp {
         
         const projectName = document.getElementById('project-name').value.trim();
         const selectedFramework = document.querySelector('input[name="framework"]:checked');
+        const requirementsText = this.getUserPrompt();
         
         if (!projectName) {
             this.showNotification('Please enter a project name', 'error');
@@ -921,6 +973,13 @@ class CodeAssistApp {
         
         if (!selectedFramework) {
             this.showNotification('Please select a framework', 'error');
+            return;
+        }
+        
+        // Validate project name (alphanumeric, underscore, hyphen only)
+        const validNameRegex = /^[a-zA-Z0-9_-]+$/;
+        if (!validNameRegex.test(projectName)) {
+            this.showNotification('Project name can only contain letters, numbers, underscores and hyphens', 'error');
             return;
         }
         
@@ -933,8 +992,16 @@ class CodeAssistApp {
             project_type: this.analysisResult.project_type || 'Unknown',
             description: this.analysisResult.description || '',
             features: Array.isArray(this.analysisResult.features) ? this.analysisResult.features : [],
-            suggested_packages: Array.isArray(this.analysisResult.suggested_packages) ? this.analysisResult.suggested_packages : []
+            suggested_packages: Array.isArray(this.analysisResult.suggested_packages) ? this.analysisResult.suggested_packages : [],
+            suggested_frameworks: [selectedFramework.value]
         };
+        
+        // Log what we're sending to help with debugging
+        console.log('Sending project creation request with data:', {
+            projectName,
+            framework: selectedFramework.value,
+            analysisData
+        });
         
         // Make API request
         fetch('/api/project/create', {
@@ -946,26 +1013,34 @@ class CodeAssistApp {
                 projectName: projectName,
                 framework: selectedFramework.value,
                 analysis: analysisData,
-                requirements: document.getElementById('project-requirements').value.trim()
+                requirements: requirementsText
             })
         })
         .then(response => {
+            console.log('Project creation response status:', response.status);
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`Server responded with status: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
+            console.log('Project creation response data:', data);
             if (data.success) {
                 this.showNotification('Project created successfully', 'success');
-                this.openProject(projectName);
+                // Short delay before redirecting to give notification time to show
+                setTimeout(() => {
+                    this.openProject(projectName);
+                }, 1000);
             } else {
                 throw new Error(data.error || 'Failed to create project');
             }
         })
         .catch(error => {
             console.error('Error creating project:', error);
-            this.showNotification(error.message || 'Failed to create project', 'error');
+            this.showNotification(`Project creation failed: ${error.message}`, 'error');
+            // Re-enable the create button so user can try again
+            const createBtn = document.getElementById('create-project-confirm-btn');
+            if (createBtn) createBtn.disabled = false;
         })
         .finally(() => {
             this.hideLoading();
@@ -994,7 +1069,7 @@ class CodeAssistApp {
     }
     
     renderProjects(projects) {
-        const container = document.getElementById('project-grid');
+        const container = document.getElementById('projects-list');
         container.innerHTML = '';
         
         if (projects.length === 0) {
@@ -1953,4 +2028,26 @@ class CodeAssistApp {
                 return 'text';
         }
     }
+}
+
+function validateJSON(jsonString) {
+  try {
+    JSON.parse(jsonString);
+    return true;
+  } catch (error) {
+    displayError('Invalid JSON format: ' + error.message);
+    return false;
+  }
+}
+
+function displayAnalysisResults(data) {
+  const isValid = validateJSON(data);
+  if (!isValid) {
+    displayError('AI response format error - using fallback requirements');
+    data = JSON.stringify({
+      components: ['Fallback Task Manager UI', 'Basic CRUD Operations'],
+      structure: ['Main interface with task list', 'Add/edit/delete controls']
+    });
+  }
+  document.getElementById('create-project-confirm-btn').style.display = isValid ? 'block' : 'none';
 }

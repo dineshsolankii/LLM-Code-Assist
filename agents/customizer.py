@@ -9,7 +9,7 @@ class CodeCustomizer:
     def __init__(self, model_manager, rag_system):
         self.model_manager = model_manager
         self.rag_system = rag_system
-        self.model = "deepseek-coder-v2:latest"  # Using deepseek-coder-v2:latest model for code customization
+        self.model = "deepseek-coder-v2:16b"  # Using the 16B model for code customization
 
     def customize(self, project_name: str, file_path: str, current_code: str, customization_request: str) -> str:
         """

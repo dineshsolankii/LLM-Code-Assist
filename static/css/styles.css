@@ -476,12 +476,12 @@ body {
 /* Framework Selection */
 .framework-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 1.5rem;
     width: 100%;
     max-width: 1200px;
-    margin: 1rem auto;
+    margin: 1.5rem auto;
 }
 
 .framework-option {
@@ -497,7 +497,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem;
+    padding: 2.5rem 2rem;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 16px;
@@ -521,8 +521,8 @@ body {
 }
 
 .framework-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
     background: linear-gradient(135deg, var(--primary-color), #6aa8e7);
     background-clip: text;
     -webkit-background-clip: text;
@@ -531,9 +531,9 @@ body {
 }
 
 .framework-option span {
-    font-size: clamp(1.1rem, 2vw, 1.3rem);
+    font-size: clamp(1.2rem, 2vw, 1.4rem);
     font-weight: 600;
-    margin: 0.5rem 0;
+    margin: 0.75rem 0;
     background: linear-gradient(135deg, var(--text-color), #4a5568);
     background-clip: text;
     -webkit-background-clip: text;
@@ -543,7 +543,8 @@ body {
 .framework-option small {
     color: var(--info-color);
     text-align: center;
-    font-size: clamp(0.85rem, 1.5vw, 0.95rem);
+    font-size: clamp(0.9rem, 1.5vw, 1rem);
+    margin-top: 0.5rem;
 }
 
 /* Framework-specific colors */
@@ -593,10 +594,17 @@ body {
 
 /* Analysis Result */
 .analysis-result {
-    margin-top: 2rem;
+    margin-top: 2.5rem;
     width: 100%;
-    max-width: 600px;
-    margin: 2rem auto;
+    max-width: 800px;
+    margin: 2.5rem auto;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .analysis-content {
@@ -610,7 +618,11 @@ body {
 }
 
 .analysis-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
 }
 
 .analysis-section:last-child {
@@ -618,10 +630,10 @@ body {
 }
 
 .analysis-section h4 {
-    font-size: clamp(1.1rem, 2vw, 1.3rem);
+    font-size: clamp(1.2rem, 2vw, 1.4rem);
     font-weight: 600;
-    margin-bottom: 0.75rem;
-    background: linear-gradient(135deg, var(--text-color), #4a5568);
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--primary-color), #6aa8e7);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -629,23 +641,30 @@ body {
 
 .analysis-section p {
     color: var(--text-color);
-    font-size: clamp(0.9rem, 1.5vw, 1rem);
-    line-height: 1.6;
+    font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+    line-height: 1.7;
 }
 
 .analysis-section ul {
     list-style: none;
-    padding: 0;
-    margin: 0;
+    padding: 0 0 0 0.5rem;
+    margin: 0.5rem 0 0 0;
 }
 
 .analysis-section li {
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: clamp(0.9rem, 1.5vw, 1rem);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.analysis-section li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .analysis-section li strong {

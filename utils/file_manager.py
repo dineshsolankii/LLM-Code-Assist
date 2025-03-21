@@ -23,23 +23,66 @@ class FileManager:
         
     def create_project_structure(self, project_name: str, file_structure: List[Dict[str, str]]) -> None:
         """Create project directory structure from a list of files and directories."""
-        project_path = self.get_project_path(project_name)
-        os.makedirs(project_path, exist_ok=True)
-        
-        for item in file_structure:
-            path = item["path"]
-            item_type = item["type"]
-            full_path = os.path.join(project_path, path)
+        try:
+            if not project_name or not isinstance(project_name, str):
+                raise ValueError(f"Invalid project name: {project_name}")
+                
+            if not isinstance(file_structure, list):
+                raise ValueError(f"Invalid file structure: {file_structure}. Expected a list.")
+                
+            project_path = self.get_project_path(project_name)
+            logger.info(f"Creating project structure at {project_path}")
+            os.makedirs(project_path, exist_ok=True)
             
-            if item_type == "directory":
-                os.makedirs(full_path, exist_ok=True)
-                logger.info(f"Created directory: {full_path}")
-            elif item_type == "file":
-                os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                if not os.path.exists(full_path):
-                    with open(full_path, 'w') as f:
-                        f.write("")
-                    logger.info(f"Created empty file: {full_path}")
+            for i, item in enumerate(file_structure):
+                try:
+                    if not isinstance(item, dict):
+                        logger.warning(f"Skipping invalid file structure item at index {i}: {item}")
+                        continue
+                        
+                    if "path" not in item or "type" not in item:
+                        logger.warning(f"Skipping file structure item missing path or type at index {i}: {item}")
+                        continue
+                        
+                    path = item["path"]
+                    item_type = item["type"]
+                    
+                    if not path or not isinstance(path, str):
+                        logger.warning(f"Skipping invalid path at index {i}: {path}")
+                        continue
+                        
+                    # Sanitize path to prevent directory traversal attacks
+                    path = os.path.normpath(path).lstrip(os.sep)
+                    full_path = os.path.join(project_path, path)
+                    
+                    # Ensure we're not trying to create files outside the project directory
+                    if not os.path.commonpath([project_path]) == os.path.commonpath([project_path, full_path]):
+                        logger.warning(f"Attempted path traversal detected: {path}. Skipping.")
+                        continue
+                    
+                    if item_type == "directory":
+                        os.makedirs(full_path, exist_ok=True)
+                        logger.info(f"Created directory: {full_path}")
+                    elif item_type == "file":
+                        dir_path = os.path.dirname(full_path)
+                        if dir_path:
+                            os.makedirs(dir_path, exist_ok=True)
+                        if not os.path.exists(full_path):
+                            with open(full_path, 'w') as f:
+                                f.write("")
+                            logger.info(f"Created empty file: {full_path}")
+                    else:
+                        logger.warning(f"Unknown item type '{item_type}' for path '{path}'. Skipping.")
+                except Exception as e:
+                    logger.error(f"Error creating file/directory for item {item}: {str(e)}")
+                    # Continue with the next item instead of failing the whole operation
+                    
+            logger.info(f"Project structure creation completed for {project_name}")
+        except Exception as e:
+            logger.error(f"Error creating project structure: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
                     
     def write_file(self, project_name: str, file_path: str, content: str) -> None:
         """Write content to a file in the project."""

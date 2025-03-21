@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 import logging
+import re
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,18 @@ class RequirementAnalyzer:
             response = self.model_manager.generate(prompt=prompt, model=self.model)
             if isinstance(response, str):
                 # Try to parse string response
-                requirements = json.loads(response)
+                try:
+                    # Extract JSON from code block if present
+                    json_match = re.search(r'```json\n(.*?)\n```', response, re.DOTALL)
+                    if json_match:
+                        response = json_match.group(1)
+                    requirements = json.loads(response)
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parsing failed: {e}\nRaw response: {response}")
+                    requirements = {
+                        'components': ['Task Manager Interface', 'Database Integration'],
+                        'structure': ['Basic CRUD Operations', 'Task Filtering']
+                    }
             elif isinstance(response, dict):
                 # Use response directly
                 requirements = response
@@ -80,15 +92,17 @@ class RequirementAnalyzer:
             # Validate and ensure required fields
             requirements = self._validate_requirements(requirements)
             logger.info("Successfully analyzed requirements")
+            logger.debug(f"Final requirements: {requirements}")
             return requirements
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse model response as JSON: {e}")
+            logger.error(f"Failed to parse model response as JSON: {e}\nRaw response: {response}")
+            logger.error('Invalid JSON format in analysis response')
             return self._get_default_requirements()
         except Exception as e:
             logger.error(f"Error analyzing requirements: {e}")
             return self._get_default_requirements()
 
-    def _validate_requirements(self, requirements: Dict[str, Any]) -> None:
+    def _validate_requirements(self, requirements: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and ensure the requirements dictionary has all required fields."""
         # Ensure required fields exist
         required_fields = [
@@ -118,6 +132,8 @@ class RequirementAnalyzer:
                 feature["description"] = "No description provided"
             if "priority" not in feature:
                 feature["priority"] = "medium"
+                
+        return requirements
 
     def _get_default_requirements(self) -> Dict[str, Any]:
         """Return default requirements for a calculator project."""
