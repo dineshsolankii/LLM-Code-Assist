@@ -11,7 +11,7 @@ class ProjectCreator:
         self.model_manager = model_manager
         self.rag_system = rag_system
         self.file_manager = file_manager
-        self.model = "deepseek-coder-v2:16b"
+        self.model = "qwen2.5-coder:7b"
 
     def create_project(self, requirements: Dict[str, Any], framework: str, project_name: str) -> str:
         """Create the project structure based on requirements and framework."""
