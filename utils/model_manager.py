@@ -34,7 +34,7 @@ class ModelManager:
             
             raise RuntimeError(f"{error_msg}. Please ensure Ollama server is running.")
 
-    def generate(self, prompt: str, model: str = "deepseek-coder-v2:16b", system_prompt: Optional[str] = None, 
+    def generate(self, prompt: str, model: str = "qwen2.5-coder:7b", system_prompt: Optional[str] = None, 
                 temperature: float = 0.2, max_tokens: int = 4096) -> Union[str, Dict[str, Any]]:
         """Generate a response from the model."""
         logger.info(f"Generating response using model {model}")
