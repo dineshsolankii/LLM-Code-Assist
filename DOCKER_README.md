@@ -11,7 +11,22 @@ This document provides instructions for sharing and running the LLM-Code-Assist 
 
 1. Create a zip archive of the entire project directory:
    ```bash
-   cd /path/to/LLM-Code-Assist
+   cd /path/to/LLM-Code-AssistB^GB Help                                                                                                   B
+   
+                                                        
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+                                                  B[ Read 6 lines ]BB  GNU nano 7.2                   /mnt/data2/Preprod/LLM-Code-Assist/.git/MERGE_MSG                            
+   B^XB Exit      B^OB Write Out   B^WB Where Is    B^KB Cut   B^TB Execute     B^CB Location    BM-UB Undo
+     the commit.ing with '#' will be ignored, and an empty message aborts,t     B^/B Go To Line  BM-EB Redo
    zip -r LLM-Code-Assist.zip .
    ```
 
