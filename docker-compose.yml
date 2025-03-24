@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  llm-code-assist:
+    build: .
+    container_name: llm-code-assist
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./projects:/app/projects
+      - ./data:/app/data
+    environment:
+      - TOKENIZERS_PARALLELISM=false
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    networks:
+      - llm-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    networks:
+      - llm-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  llm-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
