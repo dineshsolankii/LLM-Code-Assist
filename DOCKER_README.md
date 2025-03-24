@@ -7,33 +7,6 @@ This document provides instructions for sharing and running the LLM-Code-Assist 
 - [Docker](https://docs.docker.com/get-docker/) (version 20.10.0 or higher)
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2.0.0 or higher)
 
-## Steps to Share This Project
-
-1. Create a zip archive of the entire project directory:
-   ```bash
-   cd /path/to/LLM-Code-AssistB^GB Help                                                                                                   B
-   
-                                                        
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-                                                  B[ Read 6 lines ]BB  GNU nano 7.2                   /mnt/data2/Preprod/LLM-Code-Assist/.git/MERGE_MSG                            
-   B^XB Exit      B^OB Write Out   B^WB Where Is    B^KB Cut   B^TB Execute     B^CB Location    BM-UB Undo
-     the commit.ing with '#' will be ignored, and an empty message aborts,t     B^/B Go To Line  BM-EB Redo
-   zip -r LLM-Code-Assist.zip .
-   ```
-
-2. Share the `LLM-Code-Assist.zip` file with your manager via email, file sharing service, or USB drive.
-
-3. Instruct your manager to extract the zip file to a directory of their choice.
-
 ## Quick Start (For the Recipient)
 
 1. Extract the project files to a directory on your machine.
