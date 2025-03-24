@@ -10,7 +10,7 @@ class RequirementAnalyzer:
     def __init__(self, model_manager, rag_system):
         self.model_manager = model_manager
         self.rag_system = rag_system
-        self.model = "deepseek-coder-v2:16b"  # Using deepseek-coder-v2:16b model for requirement analysis
+        self.model = "qwen2.5-coder:7b"  # Using deepseek-coder-v2:16b model for requirement analysis
 
     def analyze(self, user_prompt: str) -> Dict[str, Any]:
         """
