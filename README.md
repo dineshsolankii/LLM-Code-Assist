@@ -4,7 +4,7 @@ A web-based IDE for generating and executing Python projects with AI assistance.
 
 ## Features
 
-- **AI-Powered Code Generation**: Uses Ollama with deepseek-coder-v2:16b model
+- **AI-Powered Code Generation**: Uses Ollama with qwen2.5-coder:7b model
 - **Modern UI**: Dark theme with glass-morphism effects and smooth transitions
 - **Real-time Communication**: Flask backend with SocketIO
 - **Code Editing**: CodeMirror integration with custom theme
