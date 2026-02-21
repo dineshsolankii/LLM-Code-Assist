@@ -1,0 +1,27 @@
+version: "3.8"
+
+# Development overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  web:
+    environment:
+      - FLASK_ENV=development
+      - SKIP_AUTH=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app
+    command: python run.py
+
+  ollama:
+    deploy:
+      resources: {}
+
+  celery-worker:
+    command: celery -A celery_app worker --loglevel=debug --concurrency=1
+    volumes:
+      - .:/app
+
+  celery-beat:
+    command: celery -A celery_app beat --loglevel=debug
+    volumes:
+      - .:/app

@@ -1,46 +1,148 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  llm-code-assist:
-    build: .
-    container_name: llm-code-assist
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: llm-postgres
+    environment:
+      POSTGRES_DB: llm_code_assist
+      POSTGRES_USER: llm_user
+      POSTGRES_PASSWORD: llm_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llm_user -d llm_code_assist"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: llm-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Ollama LLM backend ─────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: llm-ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── Web application ────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-dev}"
+    container_name: llm-web
+    env_file: .env
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://llm_user:llm_password@postgres:5432/llm_code_assist
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
+      - OLLAMA_BASE_URL=http://ollama:11434
     ports:
       - "8001:8001"
     volumes:
       - ./projects:/app/projects
       - ./data:/app/data
-    environment:
-      - TOKENIZERS_PARALLELISM=false
-    restart: unless-stopped
     depends_on:
-      - ollama
-    networks:
-      - llm-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama-server
-    volumes:
-      - ollama-data:/root/.ollama
-    ports:
-      - "11434:11434"
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
     restart: unless-stopped
-    networks:
-      - llm-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-networks:
-  llm-network:
-    driver: bridge
+  # ── Celery worker ──────────────────────────────────────────────────────────
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-dev}"
+    container_name: llm-celery-worker
+    command: celery -A celery_app worker --loglevel=info --concurrency=2 -Q default,analysis,generation
+    env_file: .env
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://llm_user:llm_password@postgres:5432/llm_code_assist
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./projects:/app/projects
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Celery beat scheduler ──────────────────────────────────────────────────
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-dev}"
+    container_name: llm-celery-beat
+    command: celery -A celery_app beat --loglevel=info --schedule=/app/data/celerybeat-schedule
+    env_file: .env
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://llm_user:llm_password@postgres:5432/llm_code_assist
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
-  ollama-data:
+  pgdata:
+  redisdata:
+  ollama_models:
