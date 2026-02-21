@@ -1,293 +1,617 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Code Assist</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-</head>
-<body>
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <div id="loading-message" class="loading-message">Loading...</div>
+{% extends 'base.html' %}
+
+{% block title %}LLM Code Assist{% endblock %}
+
+{% block content %}
+<!-- ============================================================
+     SCREEN: DASHBOARD
+     ============================================================ -->
+<div id="screen-dashboard" class="screen flex flex-col">
+
+  <!-- Dashboard Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold gradient-text mb-1">Dashboard</h1>
+      <p class="text-secondary">Manage your AI-powered projects</p>
+    </div>
+    <button class="btn btn-primary flex items-center gap-2" onclick="App.showScreen('create')" title="New Project (⌘N)">
+      <i class="fas fa-plus"></i>
+      <span>New Project</span>
+      <kbd class="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded"
+           style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:var(--text-muted);">
+        ⌘N
+      </kbd>
+    </button>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+
+    <div class="stat-card">
+      <div class="flex items-center gap-3">
+        <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:var(--accent-light);">
+          <i class="fas fa-folder-open"></i>
         </div>
+        <div>
+          <div class="text-xs text-muted uppercase tracking-wider mb-1">Projects</div>
+          <div class="text-2xl font-bold text-primary" id="stat-projects">0</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-left">
-            <button id="new-project-btn" class="nav-btn">
-                <i class="fas fa-plus"></i> New Project
-            </button>
-            <button id="projects-btn" class="nav-btn">
-                <i class="fas fa-folder"></i> Projects
-            </button>
+    <div class="stat-card">
+      <div class="flex items-center gap-3">
+        <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:var(--accent-light);">
+          <i class="fas fa-robot"></i>
         </div>
-        <div class="nav-right">
-            <button id="settings-btn" class="nav-btn">
-                <i class="fas fa-cog"></i> Settings
-            </button>
+        <div>
+          <div class="text-xs text-muted uppercase tracking-wider mb-1">Model</div>
+          <div class="text-2xl font-bold text-primary" id="stat-model">--</div>
         </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-3">
+        <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:var(--accent-light);">
+          <i class="fas fa-circle"></i>
+        </div>
+        <div>
+          <div class="text-xs text-muted uppercase tracking-wider mb-1">Status</div>
+          <div class="text-2xl font-bold text-primary">
+            <span id="stat-status" class="status-badge online">Online</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Search Bar -->
+  <div class="relative mb-6">
+    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2"
+       style="color:var(--text-muted);pointer-events:none;"></i>
+    <input
+      id="project-search"
+      type="text"
+      placeholder="Search projects..."
+      class="input w-full pl-10"
+      oninput="App.filterProjects(this.value)"
+      autocomplete="off"
+    />
+  </div>
+
+  <!-- Skeleton Loaders -->
+  <div id="skeleton-projects" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+  </div>
+
+  <!-- Projects Grid -->
+  <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+    <!-- Project cards injected by App.renderProjects() -->
+  </div>
+
+  <!-- Empty State -->
+  <div id="no-projects" class="empty-state hidden">
+    <div class="empty-state-icon">
+      <i class="fas fa-folder-open"></i>
+    </div>
+    <h3 class="text-lg font-semibold text-primary mb-2">No projects yet</h3>
+    <p class="text-secondary mb-6">Create your first AI-powered project to get started.</p>
+    <button class="btn btn-primary flex items-center gap-2 mx-auto" onclick="App.showScreen('create')">
+      <i class="fas fa-plus"></i>
+      Create Your First Project
+    </button>
+  </div>
+
+</div>
+<!-- /SCREEN: DASHBOARD -->
+
+
+<!-- ============================================================
+     SCREEN: CREATE
+     ============================================================ -->
+<div id="screen-create" class="screen hidden flex-col">
+
+  <!-- Header -->
+  <div class="flex items-center gap-4 mb-8">
+    <button class="btn btn-ghost flex items-center gap-2" onclick="App.showScreen('dashboard')">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div>
+      <h1 class="text-3xl font-bold gradient-text mb-1">New Project</h1>
+      <p class="text-secondary">Describe what you want to build</p>
+    </div>
+  </div>
+
+  <!-- Step Progress Indicator -->
+  <div class="flex items-center justify-center mb-10">
+    <div class="flex flex-col items-center gap-1">
+      <div id="step-1-dot" class="step-dot active">1</div>
+      <span class="text-xs font-medium" style="color:var(--accent-light);">Describe</span>
+    </div>
+
+    <div id="step-connector" class="step-connector pending mx-2"></div>
+
+    <div class="flex flex-col items-center gap-1">
+      <div id="step-2-dot" class="step-dot pending">2</div>
+      <span class="text-xs" style="color:var(--text-muted);">Generate</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Describe -->
+  <div id="create-step-1" class="flex flex-col gap-6 max-w-2xl mx-auto w-full">
+
+    <!-- Project Name -->
+    <div>
+      <label class="block text-sm font-medium text-secondary mb-2" for="project-name">
+        Project Name <span style="color:var(--accent);">*</span>
+      </label>
+      <input
+        id="project-name"
+        type="text"
+        placeholder="my-awesome-app"
+        class="input w-full"
+        maxlength="64"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <p class="text-xs text-muted mt-1">Lowercase letters, numbers, and hyphens only.</p>
+    </div>
+
+    <!-- Framework Selection -->
+    <div>
+      <label class="block text-sm font-medium text-secondary mb-3">
+        Framework <span style="color:var(--accent);">*</span>
+      </label>
+      <div id="framework-grid" class="grid grid-cols-2 gap-3">
+        <!-- Framework cards injected by App.renderFrameworks() -->
+      </div>
+    </div>
+
+    <!-- Requirements -->
+    <div>
+      <label class="block text-sm font-medium text-secondary mb-2" for="project-requirements">
+        Project Requirements <span style="color:var(--accent);">*</span>
+      </label>
+      <textarea
+        id="project-requirements"
+        rows="6"
+        placeholder="Describe what you want to build in detail...&#10;&#10;Example: A REST API with user authentication, CRUD operations for products, PostgreSQL database, and JWT tokens."
+        class="input w-full resize-none"
+        maxlength="4000"
+        oninput="
+          var counter = document.getElementById('req-counter');
+          if(counter) counter.textContent = this.value.length + ' / 4000';
+        "
+      ></textarea>
+      <div class="flex justify-end mt-1">
+        <span id="req-counter" class="char-counter">0 / 4000</span>
+      </div>
+    </div>
+
+    <!-- Analyze Button -->
+    <div class="flex justify-end">
+      <button class="btn btn-primary flex items-center gap-2" onclick="App.analyzeRequirements()">
+        <i class="fas fa-magic"></i>
+        Analyze Requirements
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Step 2: Generate -->
+  <div id="create-step-2" class="hidden flex-col gap-6 max-w-2xl mx-auto w-full">
+
+    <!-- Analysis Results -->
+    <div>
+      <label class="block text-sm font-medium text-secondary mb-2">Analysis Results</label>
+      <div
+        id="analysis-result"
+        class="rounded-xl p-4 text-sm"
+        style="
+          background:var(--bg-elevated);
+          border:1px solid var(--border-subtle);
+          color:var(--text-secondary);
+          max-height:320px;
+          overflow-y:auto;
+          white-space:pre-wrap;
+          font-family:var(--font-mono, 'JetBrains Mono', monospace);
+          line-height:1.6;
+        "
+      >
+        <!-- Analysis markdown injected here -->
+      </div>
+    </div>
+
+    <!-- Step 2 Actions -->
+    <div class="flex items-center gap-3 justify-end">
+      <button class="btn btn-ghost flex items-center gap-2" onclick="App.backToStep1()">
+        <i class="fas fa-arrow-left"></i>
+        Back
+      </button>
+      <button class="btn btn-primary flex items-center gap-2" onclick="App.generateProject()">
+        <i class="fas fa-rocket"></i>
+        Generate Project
+      </button>
+    </div>
+
+  </div>
+
+</div>
+<!-- /SCREEN: CREATE -->
+
+
+<!-- ============================================================
+     SCREEN: EDITOR
+     ============================================================ -->
+<div id="screen-editor" class="screen hidden flex-col" style="height:calc(100vh - 4rem);">
+
+  <!-- Editor Top Bar -->
+  <div class="flex items-center gap-3 px-4 py-2 flex-shrink-0"
+       style="border-bottom:1px solid rgba(99,102,241,0.08);background:var(--bg-surface);">
+
+    <!-- Breadcrumb -->
+    <nav id="editor-breadcrumb" class="breadcrumb flex items-center gap-1 text-sm flex-1 min-w-0">
+      <span class="text-muted">Projects</span>
+      <i class="fas fa-chevron-right text-xs text-muted"></i>
+      <span id="editor-project-name" class="text-primary font-medium truncate">--</span>
     </nav>
 
-    <!-- Welcome Screen -->
-    <div id="welcome-screen" class="screen">
-        <div class="welcome-content">
-            <h1>Welcome to LLM Code Assist</h1>
-            <p>Create and manage your Python projects with AI assistance</p>
-            <div class="welcome-buttons">
-                <button id="create-project-btn" class="btn primary">
-                    <i class="fas fa-plus"></i> Create New Project
-                </button>
-                <button id="browse-projects-btn" class="btn secondary">
-                    <i class="fas fa-folder-open"></i> Browse Projects
-                </button>
-            </div>
+    <!-- Framework Badge -->
+    <span id="editor-framework-badge" class="badge-indigo hidden text-xs flex-shrink-0">--</span>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <button class="btn btn-ghost btn-sm flex items-center gap-1.5 text-sm" onclick="App.saveCurrentFile()" title="Save (⌘S)">
+        <i class="fas fa-save"></i>
+        <span class="hidden sm:inline">Save</span>
+      </button>
+      <button id="btn-run" class="btn btn-primary btn-sm flex items-center gap-1.5 text-sm" onclick="App.runProject()" title="Run project">
+        <i class="fas fa-play"></i>
+        <span class="hidden sm:inline">Run</span>
+      </button>
+      <button id="btn-stop" class="btn btn-ghost btn-sm flex items-center gap-1.5 text-sm hidden" onclick="App.stopExecution()" title="Stop">
+        <i class="fas fa-stop"></i>
+        <span class="hidden sm:inline">Stop</span>
+      </button>
+      <button class="btn btn-ghost btn-sm flex items-center gap-1.5 text-sm" onclick="App.showScreen('dashboard')" title="Back to dashboard">
+        <i class="fas fa-th-large"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Three-Column Editor Layout -->
+  <div class="flex flex-1 min-h-0 overflow-hidden">
+
+    <!-- LEFT: File Tree (w-56) -->
+    <div class="flex flex-col flex-shrink-0"
+         style="width:14rem;border-right:1px solid rgba(99,102,241,0.08);background:var(--bg-surface);">
+
+      <div class="flex items-center justify-between px-3 py-2 flex-shrink-0"
+           style="border-bottom:1px solid rgba(99,102,241,0.08);">
+        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Files</span>
+        <button class="btn btn-ghost p-1 text-xs" onclick="App.refreshFiles()" title="Refresh file tree">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+
+      <div id="file-tree" class="flex-1 overflow-y-auto py-1">
+        <!-- File items injected by App.renderFileTree() -->
+        <div class="px-3 py-6 text-center text-xs text-muted">
+          <i class="fas fa-folder-open mb-2 text-lg opacity-40"></i>
+          <div>No files loaded</div>
         </div>
-    </div>
+      </div>
 
-    <!-- Project Creation Screen -->
-    <div id="project-creation-screen" class="screen" style="display: none;">
-        <div class="screen-content">
-            <h2>Create New Project</h2>
-            <div class="project-form">
-                <div class="form-group">
-                    <label for="project-name">Project Name</label>
-                    <input type="text" id="project-name" placeholder="Enter project name">
-                </div>
-                <div class="form-group">
-                    <label for="project-framework">Framework</label>
-                    <div class="framework-options">
-                        <div class="framework-option">
-                            <input type="radio" id="framework-django" name="framework" value="django">
-                            <label for="framework-django">
-                                <i class="fas fa-cubes framework-icon django"></i>
-                                <span>Django</span>
-                                <small>Full-featured web framework</small>
-                            </label>
-                        </div>
-                        <div class="framework-option">
-                            <input type="radio" id="framework-flask" name="framework" value="flask">
-                            <label for="framework-flask">
-                                <i class="fas fa-flask framework-icon flask"></i>
-                                <span>Flask</span>
-                                <small>Lightweight web framework</small>
-                            </label>
-                        </div>
-                        <div class="framework-option">
-                            <input type="radio" id="framework-streamlit" name="framework" value="streamlit">
-                            <label for="framework-streamlit">
-                                <i class="fas fa-stream framework-icon streamlit"></i>
-                                <span>Streamlit</span>
-                                <small>Data apps made easy</small>
-                            </label>
-                        </div>
-                        <div class="framework-option">
-                            <input type="radio" id="framework-gradio" name="framework" value="gradio">
-                            <label for="framework-gradio">
-                                <i class="fas fa-code framework-icon gradio"></i>
-                                <span>Gradio</span>
-                                <small>ML interfaces in minutes</small>
-                            </label>
-                        </div>
-                        <div class="framework-option">
-                            <input type="radio" id="framework-python" name="framework" value="python">
-                            <label for="framework-python">
-                                <i class="fab fa-python framework-icon python"></i>
-                                <span>Python</span>
-                                <small>Standard Python project</small>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="project-requirements">Project Requirements</label>
-                    <textarea
-                        id="user-prompt"
-                        class="prompt-input"
-                        placeholder="Describe your project requirements here..."
-                        rows="5"
-                    ></textarea>
-                </div>
-                <div class="form-actions">
-                    <button id="analyze-btn" class="btn primary">
-                        <i class="fas fa-search"></i> Analyze Requirements
-                    </button>
-                </div>
-            </div>
-            <div id="analysis-result" class="analysis-result" style="display: none;">
-                <div id="analysis-content" class="analysis-content">
-                    <!-- Analysis results will be displayed here -->
-                </div>
-            </div>
-            <div class="form-actions">
-                <button id="create-project-confirm-btn" class="btn primary" style="display: none;">
-                    <i class="fas fa-check"></i> Create Project
-                </button>
-                <button id="modify-analysis-btn" class="btn secondary" style="display: none;">
-                    <i class="fas fa-edit"></i> Modify Requirements
-                </button>
-            </div>
+    </div>
+    <!-- /LEFT -->
+
+    <!-- CENTER: Code Editor -->
+    <div class="flex flex-col flex-1 min-w-0 min-h-0">
+
+      <!-- Editor Tabs Row -->
+      <div id="editor-tabs"
+           class="flex items-center gap-0 flex-shrink-0 overflow-x-auto"
+           style="border-bottom:1px solid rgba(99,102,241,0.08);background:var(--bg-base);min-height:2.25rem;">
+        <!-- Tabs injected by App.openFile() -->
+      </div>
+
+      <!-- CodeMirror Container -->
+      <div id="code-editor" class="flex-1 min-h-0 overflow-hidden">
+        <!-- CodeMirror instance mounted here -->
+      </div>
+
+      <!-- Editor Placeholder (no file open) -->
+      <div id="editor-placeholder"
+           class="flex flex-col items-center justify-center flex-1 gap-4"
+           style="color:var(--text-muted);">
+        <i class="fas fa-file-code text-5xl opacity-20"></i>
+        <div class="text-center">
+          <p class="font-medium text-secondary mb-1">No file open</p>
+          <p class="text-sm text-muted">Select a file from the tree to start editing</p>
         </div>
-    </div>
+      </div>
 
-    <!-- Project List Screen -->
-    <div id="project-list-screen" class="screen" style="display: none;">
-        <div class="screen-content">
-            <div class="screen-header">
-                <h2>Your Projects</h2>
-                <div class="screen-actions">
-                    <input type="text" id="project-search" placeholder="Search projects...">
-                    <button id="refresh-projects-btn" class="btn secondary">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                </div>
-            </div>
-            <div id="projects-list" class="projects-list">
-                <!-- Projects will be loaded dynamically -->
-            </div>
+      <!-- Terminal Panel (collapsible bottom) -->
+      <div id="terminal-panel"
+           class="flex-shrink-0"
+           style="height:10rem;border-top:1px solid rgba(99,102,241,0.08);background:#020209;display:none;flex-direction:column;">
+
+        <div class="flex items-center justify-between px-3 py-1.5 flex-shrink-0"
+             style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div class="flex items-center gap-2 text-xs text-muted">
+            <i class="fas fa-terminal"></i>
+            <span class="font-mono">Terminal</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-ghost p-1 text-xs" onclick="App.clearTerminal()" title="Clear">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            <button class="btn btn-ghost p-1 text-xs" onclick="App.toggleTerminal()" title="Close">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
-    </div>
 
-    <!-- Project Editor Screen -->
-    <div id="project-editor-screen" class="screen" style="display: none;">
-        <div class="screen-content">
-            <div class="editor-header">
-                <button id="editor-back-btn" class="btn secondary">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-                <div class="project-title">
-                    <h3>Project: <span id="editor-project-name"></span></h3>
-                </div>
-                <div class="editor-actions">
-                    <button id="run-project-btn" class="btn primary">
-                        <i class="fas fa-play"></i> Run
-                    </button>
-                    <button id="install-deps-btn" class="btn secondary">
-                        <i class="fas fa-download"></i> Install Dependencies
-                    </button>
-                    <button id="save-file-btn" class="btn secondary">
-                        <i class="fas fa-save"></i> Save
-                    </button>
-                    <button id="customize-code-btn" class="btn secondary">
-                        <i class="fas fa-magic"></i> Customize
-                    </button>
-                    <button id="new-file-btn" class="btn secondary">
-                        <i class="fas fa-file"></i> New File
-                    </button>
-                </div>
-            </div>
-            <div class="editor-container">
-                <div class="file-explorer">
-                    <div id="file-tree"></div>
-                </div>
-                <div class="editor-main">
-                    <div id="editor-tabs" class="editor-tabs"></div>
-                    <div id="code-editor"></div>
-                </div>
-            </div>
-            <div id="terminal" class="terminal">
-                <div class="terminal-header">
-                    <span>Terminal</span>
-                    <div class="terminal-controls">
-                        <button id="clear-terminal-btn" class="btn-icon">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <button id="toggle-terminal-btn" class="btn-icon">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                    </div>
-                </div>
-                <div id="terminal-content" class="terminal-content">
-                    <div id="terminal-output"></div>
-                </div>
-            </div>
+        <div id="terminal-output"
+             class="flex-1 overflow-y-auto px-3 py-2 font-mono text-xs"
+             style="color:#a3e635;line-height:1.6;">
+          <!-- Terminal lines injected -->
         </div>
-    </div>
 
-    <!-- Settings Dialog -->
-    <div id="settings-dialog" class="dialog">
-        <div class="dialog-content">
-            <h2>Settings</h2>
-            <div class="settings-form">
-                <div class="form-group">
-                    <label for="theme-select">Theme</label>
-                    <select id="theme-select">
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Editor Settings</label>
-                    <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" id="line-numbers-toggle" checked>
-                            Show Line Numbers
-                        </label>
-                        <label>
-                            <input type="checkbox" id="word-wrap-toggle" checked>
-                            Word Wrap
-                        </label>
-                        <label>
-                            <input type="checkbox" id="auto-indent-toggle" checked>
-                            Auto Indent
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="dialog-actions">
-                <button id="save-settings-btn" class="btn primary">Save</button>
-                <button id="cancel-settings-btn" class="btn secondary">Cancel</button>
-            </div>
+      </div>
+      <!-- /Terminal Panel -->
+
+    </div>
+    <!-- /CENTER -->
+
+    <!-- RIGHT: AI Chat Panel (w-72) -->
+    <div id="chat-panel"
+         class="flex flex-col flex-shrink-0"
+         style="width:18rem;border-left:1px solid rgba(99,102,241,0.08);background:var(--bg-surface);">
+
+      <!-- Chat Header -->
+      <div class="flex items-center gap-2 px-3 py-2 flex-shrink-0"
+           style="border-bottom:1px solid rgba(99,102,241,0.08);">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center"
+             style="background:var(--accent);font-size:0.7rem;">
+          <i class="fas fa-robot text-white"></i>
         </div>
-    </div>
-
-    <!-- Customization Dialog -->
-    <div id="customization-dialog" class="dialog">
-        <div class="dialog-content">
-            <h2>Customize Code</h2>
-            <div class="form-group">
-                <label for="customization-request">What would you like to change?</label>
-                <textarea id="customization-request" placeholder="Describe the changes you want to make..."></textarea>
-            </div>
-            <div class="dialog-actions">
-                <button id="apply-customization-btn" class="btn primary">Apply</button>
-                <button id="cancel-customization-btn" class="btn secondary">Cancel</button>
-            </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-primary">AI Assistant</div>
+          <div class="text-xs text-muted">Ask anything about your code</div>
         </div>
-    </div>
+        <span class="status-badge online" style="font-size:0.6rem;">Live</span>
+      </div>
 
-    <!-- New File Dialog -->
-    <div id="new-file-dialog" class="dialog">
-        <div class="dialog-content">
-            <h2>Create New File</h2>
-            <div class="form-group">
-                <label for="new-file-name">File Name</label>
-                <input type="text" id="new-file-name" placeholder="Enter file name">
-            </div>
-            <div class="dialog-actions">
-                <button id="create-file-btn" class="btn primary">Create</button>
-                <button id="cancel-new-file-btn" class="btn secondary">Cancel</button>
-            </div>
+      <!-- Chat Messages -->
+      <div id="chat-messages"
+           class="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
+
+        <!-- Initial AI welcome message -->
+        <div class="chat-msg ai">
+          <div class="chat-msg-bubble">
+            <p>Hi! I'm your AI coding assistant. I can help you:</p>
+            <ul class="mt-2 space-y-1 text-sm" style="list-style:disc;padding-left:1rem;">
+              <li>Explain or refactor code</li>
+              <li>Fix bugs and errors</li>
+              <li>Add new features</li>
+              <li>Answer questions</li>
+            </ul>
+            <p class="mt-2 text-xs text-muted">Select a file and start typing!</p>
+          </div>
         </div>
+
+      </div>
+
+      <!-- Typing Indicator -->
+      <div id="typing-indicator" class="typing-indicator hidden px-3 pb-2">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="flex-shrink-0 px-3 py-2" style="border-top:1px solid rgba(99,102,241,0.08);">
+        <div class="flex items-end gap-2">
+          <textarea
+            id="chat-input"
+            rows="2"
+            placeholder="Ask about the code..."
+            class="input flex-1 resize-none text-sm"
+            style="min-height:2.5rem;max-height:8rem;"
+            onkeydown="
+              if(event.key==='Enter' && !event.shiftKey){
+                event.preventDefault();
+                App.sendChatMessage();
+              }
+            "
+          ></textarea>
+          <button class="btn btn-primary p-2.5 flex-shrink-0" onclick="App.sendChatMessage()" title="Send (Enter)">
+            <i class="fas fa-paper-plane text-sm"></i>
+          </button>
+        </div>
+        <p class="text-xs text-muted mt-1">Enter to send, Shift+Enter for newline</p>
+      </div>
+
+    </div>
+    <!-- /RIGHT -->
+
+  </div>
+  <!-- /Three-Column Layout -->
+
+</div>
+<!-- /SCREEN: EDITOR -->
+
+
+<!-- ============================================================
+     SCREEN: SETTINGS
+     ============================================================ -->
+<div id="screen-settings" class="screen hidden flex-col">
+
+  <!-- Header -->
+  <div class="flex items-center gap-4 mb-8">
+    <button class="btn btn-ghost flex items-center gap-2" onclick="App.showScreen('dashboard')">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div>
+      <h1 class="text-3xl font-bold gradient-text mb-1">Settings</h1>
+      <p class="text-secondary">Customize your experience</p>
+    </div>
+  </div>
+
+  <div class="max-w-2xl mx-auto w-full flex flex-col gap-6">
+
+    <!-- Profile Section -->
+    <div class="card" style="padding:1.5rem;">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-muted mb-4">Profile</h2>
+      <div class="flex items-center gap-4">
+        <img
+          id="settings-avatar"
+          src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=64"
+          alt="Avatar"
+          class="w-16 h-16 rounded-full object-cover flex-shrink-0"
+          style="border:2px solid var(--accent);"
+        />
+        <div class="flex-1 min-w-0">
+          <div id="settings-name" class="text-lg font-semibold text-primary truncate">--</div>
+          <div id="settings-email" class="text-sm text-muted truncate">--</div>
+          <span class="badge-green mt-1 inline-block">Verified</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Notification -->
-    <div id="notification" class="notification">
-        <i class="fas fa-info-circle"></i>
-        <span></span>
+    <!-- AI Configuration Section -->
+    <div class="card" style="padding:1.5rem;">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-muted mb-4">AI Configuration</h2>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Ollama Server URL</div>
+          <div class="settings-description">Base URL for your local Ollama instance</div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <input
+            id="settings-ollama-url"
+            type="text"
+            value="http://localhost:11434"
+            class="input text-sm"
+            style="width:14rem;"
+            placeholder="http://localhost:11434"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
+      <div class="settings-row" style="border-bottom:none;">
+        <div>
+          <div class="settings-label">Active Model</div>
+          <div class="settings-description">Currently loaded language model</div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <span id="stat-model-settings" class="badge-indigo text-sm">--</span>
+          <button class="btn btn-ghost btn-sm text-xs" onclick="App.refreshModel && App.refreshModel()">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
-    <script src="/static/js/app.js"></script>
-</body>
-</html>
+    <!-- Editor Section -->
+    <div class="card" style="padding:1.5rem;">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-muted mb-4">Editor</h2>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Font Size</div>
+          <div class="settings-description">Code editor font size in pixels</div>
+        </div>
+        <select id="settings-font-size" class="input text-sm flex-shrink-0" style="width:7rem;">
+          <option value="12">12px</option>
+          <option value="13">13px</option>
+          <option value="14" selected>14px</option>
+          <option value="15">15px</option>
+          <option value="16">16px</option>
+          <option value="17">17px</option>
+          <option value="18">18px</option>
+        </select>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Tab Size</div>
+          <div class="settings-description">Number of spaces per indentation level</div>
+        </div>
+        <select id="settings-tab-size" class="input text-sm flex-shrink-0" style="width:7rem;">
+          <option value="2">2 spaces</option>
+          <option value="4" selected>4 spaces</option>
+        </select>
+      </div>
+
+      <div class="settings-row" style="border-bottom:none;">
+        <div>
+          <div class="settings-label">Word Wrap</div>
+          <div class="settings-description">Wrap long lines in the editor</div>
+        </div>
+        <label class="toggle-switch flex-shrink-0">
+          <input type="checkbox" id="settings-word-wrap" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+    </div>
+
+    <!-- Save Button -->
+    <div class="flex justify-end">
+      <button class="btn btn-primary flex items-center gap-2" onclick="App.saveSettings()">
+        <i class="fas fa-check"></i>
+        Save Settings
+      </button>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card" style="padding:1.5rem;border-color:rgba(239,68,68,0.35);">
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-4" style="color:#f87171;">Danger Zone</h2>
+
+      <div class="settings-row" style="border-bottom:none;">
+        <div>
+          <div class="settings-label" style="color:#f87171;">Sign Out</div>
+          <div class="settings-description">End your current session</div>
+        </div>
+        <a href="/auth/logout"
+           class="btn flex items-center gap-2 text-sm flex-shrink-0"
+           style="border:1px solid rgba(239,68,68,0.5);color:#f87171;background:rgba(239,68,68,0.08);padding:0.4rem 1rem;border-radius:0.5rem;text-decoration:none;transition:all 0.2s;"
+           onmouseover="this.style.background='rgba(239,68,68,0.18)'"
+           onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+          <i class="fas fa-sign-out-alt"></i>
+          Sign Out
+        </a>
+      </div>
+
+      <div class="settings-row mt-4" style="border-bottom:none;">
+        <div>
+          <div class="settings-label" style="color:#f87171;">Delete Account</div>
+          <div class="settings-description">Permanently remove all data. This cannot be undone.</div>
+        </div>
+        <button
+          class="btn flex items-center gap-2 text-sm flex-shrink-0"
+          style="border:1px solid rgba(239,68,68,0.5);color:#f87171;background:rgba(239,68,68,0.08);padding:0.4rem 1rem;border-radius:0.5rem;transition:all 0.2s;"
+          onclick="App.confirmDeleteAccount && App.confirmDeleteAccount()"
+          onmouseover="this.style.background='rgba(239,68,68,0.18)'"
+          onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+          <i class="fas fa-trash-alt"></i>
+          Delete Account
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+<!-- /SCREEN: SETTINGS -->
+{% endblock %}

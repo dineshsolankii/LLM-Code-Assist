@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#060610">
+    <title>{% block title %}LLM Code Assist{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 600:'#334155', 700:'#1e293b', 800:'#0f172a', 900:'#020617' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter','system-ui','-apple-system','sans-serif'],
+                        mono: ['JetBrains Mono','Fira Code','monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen dark" style="background:#060610; color:#f1f5f9; font-family:'Inter',system-ui,sans-serif;">
+
+{% block body %}
+<!-- Sidebar backdrop (mobile) -->
+<div id="sidebar-backdrop" onclick="App.closeSidebar && App.closeSidebar()"></div>
+
+<div id="app" class="flex h-screen overflow-hidden">
+
+    <!-- ── SIDEBAR ── -->
+    <aside id="sidebar" class="w-64 flex flex-col flex-shrink-0" style="width:256px;">
+
+        <!-- Logo -->
+        <div class="p-4 border-b" style="border-color:rgba(99,102,241,0.08);">
+            <div class="flex items-center gap-3">
+                <!-- Mobile hamburger close -->
+                <button id="sidebar-close" class="md:hidden text-slate-400 hover:text-white transition-colors" onclick="App.closeSidebar && App.closeSidebar()" style="display:none;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#6366f1,#7c3aed);">
+                    <i class="fas fa-code text-white text-sm"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-base text-white block leading-tight">Code Assist</span>
+                    <span class="text-xs" style="color:#475569;">AI-Powered Dev</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="#" data-screen="dashboard" class="nav-link active">
+                <i class="fas fa-home w-5 text-center text-sm"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" data-screen="create" class="nav-link">
+                <i class="fas fa-plus-circle w-5 text-center text-sm"></i>
+                <span>New Project</span>
+            </a>
+            <a href="#" data-screen="editor" class="nav-link">
+                <i class="fas fa-code w-5 text-center text-sm"></i>
+                <span>Editor</span>
+            </a>
+            <a href="#" data-screen="settings" class="nav-link">
+                <i class="fas fa-sliders-h w-5 text-center text-sm"></i>
+                <span>Settings</span>
+            </a>
+
+            <!-- Projects divider -->
+            <div class="pt-3 pb-1">
+                <div class="flex items-center gap-2 px-3 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider" style="color:#334155;">Recent Projects</span>
+                </div>
+                <div id="sidebar-projects" class="space-y-0.5 max-h-52 overflow-y-auto"></div>
+            </div>
+        </nav>
+
+        <!-- Connection status -->
+        <div class="px-4 py-2">
+            <div id="connection-status" class="connection-status" style="opacity:0; transition: opacity 0.4s ease;">
+                <span class="conn-dot" id="conn-dot"></span>
+                <span class="conn-text text-xs" id="conn-text">Connected</span>
+            </div>
+        </div>
+
+        <!-- User Section -->
+        <div class="p-3 border-t" style="border-color:rgba(99,102,241,0.08);">
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer group transition-all hover:bg-[rgba(99,102,241,0.08)]"
+                 onclick="if(typeof App!=='undefined')App.showScreen('settings')"
+                 title="Go to settings">
+                <div class="relative flex-shrink-0">
+                    <img id="user-avatar"
+                         src="https://ui-avatars.com/api/?background=6366f1&color=fff&name=U"
+                         alt="Avatar"
+                         class="w-8 h-8 rounded-full ring-2 transition-all"
+                         style="ring-color:transparent;"
+                         onerror="this.src='https://ui-avatars.com/api/?background=6366f1&color=fff&name=U'">
+                    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                          style="background:#22c55e; border-color:#0a0a1a;"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p id="user-name" class="text-sm font-semibold text-white truncate leading-tight">User</p>
+                    <p id="user-email" class="text-xs truncate" style="color:#475569;">Loading...</p>
+                </div>
+                <a href="/auth/logout"
+                   onclick="event.stopPropagation()"
+                   class="opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg hover:bg-red-500/10"
+                   style="color:#475569;"
+                   title="Sign out">
+                    <i class="fas fa-sign-out-alt text-xs hover:text-red-400" style="transition:color 0.2s;"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="flex-1 flex flex-col overflow-hidden" style="position:relative; z-index:1;">
+
+        <!-- Mobile top bar -->
+        <div class="md:hidden flex items-center gap-3 px-4 py-3 border-b" style="border-color:rgba(99,102,241,0.08); background:#0a0a1a; display:none!important;">
+            <button id="sidebar-toggle" onclick="App.openSidebar && App.openSidebar()"
+                    class="text-slate-400 hover:text-white transition-colors p-1" style="display:none;">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#6366f1,#7c3aed);">
+                    <i class="fas fa-code text-white text-xs"></i>
+                </div>
+                <span class="font-bold text-white text-sm">Code Assist</span>
+            </div>
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<!-- ── TOAST CONTAINER ── -->
+<div id="toast-container" class="fixed z-50 flex flex-col gap-2" style="top:1rem; right:1rem; max-width:440px;"></div>
+
+<!-- ── LOADING OVERLAY ── -->
+<div id="loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background:rgba(6,6,16,0.85);">
+    <div class="text-center px-8">
+        <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);">
+            <i class="fas fa-code text-2xl" style="color:#818cf8; animation:pulse 2s ease-in-out infinite;"></i>
+        </div>
+        <div class="loading-bar w-64 mx-auto mb-4">
+            <div class="loading-bar-fill"></div>
+        </div>
+        <p id="loading-text" class="text-base font-medium" style="color:#94a3b8;">Processing...</p>
+        <p class="text-xs mt-1" style="color:#334155;">This may take a moment</p>
+    </div>
+</div>
+
+<!-- ── CONFIRM MODAL ── -->
+<div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background:rgba(0,0,0,0.7);">
+    <div class="modal-box w-full max-w-sm mx-4 p-6">
+        <div class="flex items-start gap-4 mb-5">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2);">
+                <i class="fas fa-exclamation-triangle text-sm" style="color:#f87171;"></i>
+            </div>
+            <div>
+                <h3 id="confirm-title" class="font-semibold text-white mb-1">Confirm Action</h3>
+                <p id="confirm-message" class="text-sm" style="color:#94a3b8;">Are you sure you want to proceed?</p>
+            </div>
+        </div>
+        <div class="flex gap-3 justify-end">
+            <button onclick="App._confirmResolve(false)"
+                    class="btn-ghost text-sm px-4 py-2">Cancel</button>
+            <button id="confirm-ok-btn" onclick="App._confirmResolve(true)"
+                    class="btn-danger text-sm px-4 py-2">Delete</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+<!-- ── SCRIPTS ── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script src="/static/js/notifications.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/socket.js"></script>
+<script src="/static/js/editor.js"></script>
+<script src="/static/js/terminal.js"></script>
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

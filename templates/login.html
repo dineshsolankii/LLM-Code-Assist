@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#060610">
+    <title>LLM Code Assist — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #060610;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Animated grid background */
+        .grid-bg {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image:
+                linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+
+        /* Animated gradient mesh */
+        .mesh-bg {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(ellipse 100% 80% at 10% 5%,  rgba(99,102,241,0.12) 0%, transparent 55%),
+                radial-gradient(ellipse 80%  60% at 90% 95%, rgba(139,92,246,0.12) 0%, transparent 55%),
+                radial-gradient(ellipse 60%  40% at 50% 50%, rgba(6,182,212,0.05) 0%,  transparent 65%);
+            animation: meshAnim 15s ease-in-out infinite alternate;
+        }
+        @keyframes meshAnim {
+            from { transform: scale(1) rotate(0deg); opacity: 0.8; }
+            to   { transform: scale(1.1) rotate(1deg); opacity: 1; }
+        }
+
+        /* Floating orbs */
+        .orb {
+            position: fixed; border-radius: 50%;
+            filter: blur(90px); pointer-events: none; z-index: 0;
+        }
+        .orb-1 { width: 500px; height: 500px; background: rgba(99,102,241,0.18);  top: -150px; left: -150px; animation: float1 12s ease-in-out infinite; }
+        .orb-2 { width: 350px; height: 350px; background: rgba(139,92,246,0.15);  bottom: -100px; right: -100px; animation: float2 14s ease-in-out infinite; }
+        .orb-3 { width: 200px; height: 200px; background: rgba(6,182,212,0.1);    top: 45%; left: 55%; animation: float3 10s ease-in-out infinite; }
+        .orb-4 { width: 150px; height: 150px; background: rgba(236,72,153,0.08);  top: 25%; right: 20%; animation: float1 16s ease-in-out infinite reverse; }
+
+        @keyframes float1 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            33%  { transform: translate(40px,-40px) scale(1.08); }
+            66%  { transform: translate(-25px,25px) scale(0.95); }
+        }
+        @keyframes float2 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            40%  { transform: translate(-30px,-20px) scale(1.05); }
+            70%  { transform: translate(20px,30px) scale(0.97); }
+        }
+        @keyframes float3 {
+            0%,100% { transform: translate(-50%,-50%) scale(1); }
+            50%  { transform: translate(calc(-50% + 20px), calc(-50% - 15px)) scale(1.12); }
+        }
+
+        /* Glass card */
+        .glass-card {
+            background: rgba(15,15,36,0.75);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(99,102,241,0.12);
+            box-shadow: 0 8px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+        }
+
+        /* Feature cards */
+        .feature-card {
+            background: rgba(10,10,26,0.6);
+            border: 1px solid rgba(99,102,241,0.08);
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            background: rgba(99,102,241,0.08);
+            border-color: rgba(99,102,241,0.2);
+            transform: translateX(4px);
+        }
+
+        /* Google login button */
+        .google-btn {
+            background: linear-gradient(135deg, #6366f1, #7c3aed);
+            border: 1px solid rgba(99,102,241,0.3);
+            transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            position: relative; overflow: hidden;
+        }
+        .google-btn::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .google-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(99,102,241,0.4), 0 0 0 1px rgba(99,102,241,0.5);
+        }
+        .google-btn:hover::before { opacity: 1; }
+        .google-btn:active { transform: translateY(0) scale(0.98); }
+
+        /* Dev mode badge */
+        .dev-badge {
+            background: rgba(245,158,11,0.12);
+            border: 1px solid rgba(245,158,11,0.25);
+            color: #fbbf24;
+            border-radius: 9999px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Animated entrance */
+        .animate-up { animation: slideUpIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both; }
+        .animate-up-1 { animation-delay: 0.1s; }
+        .animate-up-2 { animation-delay: 0.2s; }
+        .animate-up-3 { animation-delay: 0.3s; }
+        .animate-up-4 { animation-delay: 0.4s; }
+        @keyframes slideUpIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse-ring { animation: pulseRing 2s ease-in-out infinite; }
+        @keyframes pulseRing {
+            0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+            50%      { box-shadow: 0 0 0 8px rgba(99,102,241,0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Backgrounds -->
+    <div class="grid-bg"></div>
+    <div class="mesh-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
+
+    <div class="relative z-10 flex items-center justify-center min-h-screen p-4 py-8">
+        <div class="w-full max-w-5xl flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+
+            <!-- LEFT — Hero section -->
+            <div class="flex-1 text-center lg:text-left animate-up animate-up-1">
+                <!-- Logo -->
+                <div class="flex items-center justify-center lg:justify-start gap-4 mb-8">
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center pulse-ring"
+                         style="background:linear-gradient(135deg,#6366f1,#7c3aed);">
+                        <i class="fas fa-code text-white text-2xl"></i>
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-3xl font-bold text-white leading-tight">LLM Code Assist</h1>
+                        <p class="text-sm" style="color:#6366f1;">Powered by Ollama</p>
+                    </div>
+                </div>
+
+                <p class="text-xl leading-relaxed mb-10 max-w-md" style="color:#94a3b8;">
+                    AI-powered code generation & project scaffolding.<br>
+                    Describe your idea — watch it come to life.
+                </p>
+
+                <!-- Feature cards -->
+                <div class="space-y-3 max-w-md">
+                    <div class="feature-card rounded-xl p-4 flex items-center gap-4 animate-up animate-up-2">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                             style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.2);">
+                            <i class="fas fa-brain" style="color:#818cf8;"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-white font-semibold text-sm">Intelligent Analysis</h3>
+                            <p class="text-sm" style="color:#64748b;">AI understands your requirements and architects solutions</p>
+                        </div>
+                    </div>
+                    <div class="feature-card rounded-xl p-4 flex items-center gap-4 animate-up animate-up-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                             style="background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.2);">
+                            <i class="fas fa-layer-group" style="color:#a78bfa;"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-white font-semibold text-sm">Multi-Framework Support</h3>
+                            <p class="text-sm" style="color:#64748b;">Flask, Gradio, Streamlit & plain Python — your choice</p>
+                        </div>
+                    </div>
+                    <div class="feature-card rounded-xl p-4 flex items-center gap-4 animate-up animate-up-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                             style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.2);">
+                            <i class="fas fa-bolt" style="color:#22d3ee;"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-white font-semibold text-sm">Live Execution & AI Chat</h3>
+                            <p class="text-sm" style="color:#64748b;">Run projects, stream output, and refine code with AI chat</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT — Login card -->
+            <div class="glass-card rounded-3xl p-8 w-full max-w-md animate-up animate-up-2">
+
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                         style="background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.2)); border:1px solid rgba(99,102,241,0.2);">
+                        <i class="fas fa-code text-2xl" style="color:#818cf8;"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-1">Welcome Back</h2>
+                    <p class="text-sm" style="color:#64748b;">Sign in to start building with AI</p>
+                </div>
+
+                <!-- Google Sign In -->
+                <a href="/auth/google" class="google-btn flex items-center justify-center gap-3 w-full py-4 rounded-2xl text-white font-semibold text-base mb-6 no-underline">
+                    <!-- Google G icon with correct brand colors -->
+                    <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
+                </a>
+
+                <!-- Divider -->
+                <div class="relative mb-6">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t" style="border-color:rgba(99,102,241,0.12);"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-3 text-xs font-medium" style="background:#0f0f24; color:#334155;">100% LOCAL AI PROCESSING</span>
+                    </div>
+                </div>
+
+                <!-- Privacy note -->
+                <div class="text-center space-y-2 mb-6">
+                    <div class="flex items-center justify-center gap-2 text-xs" style="color:#475569;">
+                        <i class="fas fa-lock text-xs" style="color:#6366f1;"></i>
+                        <span>Your code never leaves your machine</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-2 text-xs" style="color:#475569;">
+                        <i class="fas fa-server text-xs" style="color:#6366f1;"></i>
+                        <span>Powered by Ollama — open-source LLM runtime</span>
+                    </div>
+                </div>
+
+                <!-- Dev mode indicator -->
+                {% if config.get('SKIP_AUTH') %}
+                <div class="text-center">
+                    <div class="dev-badge inline-flex">
+                        <i class="fas fa-flask text-xs"></i>
+                        Dev Mode — Auth Bypassed (SKIP_AUTH=true)
+                    </div>
+                    <p class="text-xs mt-2" style="color:#475569;">
+                        <a href="/" class="underline hover:text-yellow-300 transition-colors">Enter without Google →</a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
