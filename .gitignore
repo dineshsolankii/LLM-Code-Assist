@@ -1,64 +1,60 @@
+
+!data/.gitkeep
+!projects/.gitkeep
+# Chroma
+# Credentials and tokens
+# Data directories that might contain sensitive information
+# Database
+# Docker
+# IDE
+# Model files
+# Project specific
 # Python
-__pycache__/
-*.py[cod]
+# Virtual Environment
 *$py.class
+*.bin
+*.db
+*.egg
+*.egg-info/
+*.gguf
+*.log
+*.py[cod]
+*.pyc
 *.so
+*.sqlite3
+*.swo
+*.swp
 .Python
+.chroma/
+.docker/
+.eggs/
+.env
+.env.*
+.git-credentials
+.idea/
+.installed.cfg
+.netrc
+.vscode/
+ENV/
+__pycache__/
+app.log
 build/
+chromadb/
+data/
+data/*
 develop-eggs/
 dist/
+docker-compose.override.yml
 downloads/
 eggs/
-.eggs/
+env/
+flask_session/
 lib/
 lib64/
 parts/
+projects/
+projects/*/
 sdist/
 var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
 venv/
-env/
-ENV/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Project specific
-projects/*/
-!projects/.gitkeep
-.env
-.env.*
-*.log
-app.log
-
-# Database
-*.db
-*.sqlite3
-
-# Chroma
-.chroma/
-chromadb/
-
-# Model files
-*.gguf
-*.bin
-
-# Docker
-.docker/
-docker-compose.override.yml
-
-# Credentials and tokens
-.netrc
-.git-credentials
-
-# Data directories that might contain sensitive information
-data/*
-!data/.gitkeep
+wheels/
