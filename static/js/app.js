@@ -66,11 +66,12 @@ const App = {
 
     showScreen(name) {
         const current = document.getElementById(`screen-${this.currentScreen}`);
-        if (current) current.classList.add('hidden');
+        if (current) { current.classList.add('hidden'); current.style.display = ''; }
 
         const next = document.getElementById(`screen-${name}`);
         if (next) {
             next.classList.remove('hidden');
+            next.style.display = 'flex';
             next.classList.add('screen-enter');
             setTimeout(() => next.classList.remove('screen-enter'), 300);
         }
@@ -182,17 +183,25 @@ const App = {
         if (noProjects) noProjects.classList.add('hidden');
 
         const frameworkIcons = {
-            python: 'fab fa-python', flask: 'fas fa-flask',
-            gradio: 'fas fa-globe', streamlit: 'fas fa-chart-bar'
+            python:    'fab fa-python',    flask:     'fas fa-flask',
+            fastapi:   'fas fa-bolt',      django:    'fas fa-leaf',
+            react:     'fab fa-react',     nextjs:    'fas fa-layer-group',
+            vue:       'fab fa-vuejs',     express:   'fab fa-node-js',
+            gradio:    'fas fa-brain',     streamlit: 'fas fa-chart-bar'
         };
         const frameworkColors = {
-            python:    'rgba(234,179,8,0.15)',
-            flask:     'rgba(34,197,94,0.15)',
-            gradio:    'rgba(59,130,246,0.15)',
-            streamlit: 'rgba(239,68,68,0.15)'
+            python:    'rgba(234,179,8,0.15)',   flask:     'rgba(34,197,94,0.15)',
+            fastapi:   'rgba(16,185,129,0.15)',  django:    'rgba(34,197,94,0.12)',
+            react:     'rgba(6,182,212,0.15)',   nextjs:    'rgba(248,250,252,0.08)',
+            vue:       'rgba(74,222,128,0.12)',  express:   'rgba(245,158,11,0.15)',
+            gradio:    'rgba(59,130,246,0.15)',  streamlit: 'rgba(239,68,68,0.15)'
         };
         const frameworkIconColors = {
-            python: '#facc15', flask: '#4ade80', gradio: '#60a5fa', streamlit: '#f87171'
+            python:    '#facc15', flask:     '#4ade80',
+            fastapi:   '#34d399', django:    '#86efac',
+            react:     '#22d3ee', nextjs:    '#f1f5f9',
+            vue:       '#4ade80', express:   '#fbbf24',
+            gradio:    '#60a5fa', streamlit: '#f87171'
         };
 
         grid.innerHTML = projects.map(p => {
@@ -461,6 +470,12 @@ const App = {
                 const frameworkColors = {
                     python:    { bg:'rgba(234,179,8,0.12)',   border:'rgba(234,179,8,0.25)',   icon:'#facc15' },
                     flask:     { bg:'rgba(34,197,94,0.12)',   border:'rgba(34,197,94,0.25)',   icon:'#4ade80' },
+                    fastapi:   { bg:'rgba(16,185,129,0.12)',  border:'rgba(16,185,129,0.25)',  icon:'#34d399' },
+                    django:    { bg:'rgba(34,197,94,0.10)',   border:'rgba(34,197,94,0.20)',   icon:'#86efac' },
+                    react:     { bg:'rgba(6,182,212,0.12)',   border:'rgba(6,182,212,0.25)',   icon:'#22d3ee' },
+                    nextjs:    { bg:'rgba(248,250,252,0.08)', border:'rgba(248,250,252,0.15)', icon:'#f1f5f9' },
+                    vue:       { bg:'rgba(74,222,128,0.10)',  border:'rgba(74,222,128,0.20)',  icon:'#4ade80' },
+                    express:   { bg:'rgba(245,158,11,0.12)',  border:'rgba(245,158,11,0.25)',  icon:'#fbbf24' },
                     gradio:    { bg:'rgba(59,130,246,0.12)',  border:'rgba(59,130,246,0.25)',  icon:'#60a5fa' },
                     streamlit: { bg:'rgba(239,68,68,0.12)',   border:'rgba(239,68,68,0.25)',   icon:'#f87171' }
                 };

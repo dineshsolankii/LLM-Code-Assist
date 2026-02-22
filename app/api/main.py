@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, current_app
+from flask import Blueprint, render_template, jsonify, current_app, redirect, url_for
 from flask_login import current_user
 
 main_bp = Blueprint('main', __name__)
@@ -7,7 +7,12 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 def index():
     """Render the main application page."""
-    if current_app.config.get('SKIP_AUTH') or current_user.is_authenticated:
+    if current_app.config.get('SKIP_AUTH'):
+        if not current_user.is_authenticated:
+            # Auto-login the dev user and come back to this page
+            return redirect(url_for('auth.google_login'))
+        return render_template('index.html')
+    if current_user.is_authenticated:
         return render_template('index.html')
     return render_template('login.html')
 
